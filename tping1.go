@@ -6,6 +6,7 @@ import (
 	"io"
 	"net/http"
 	"os"
+	"strconv"
 	"strings"
 	"time"
 )
@@ -16,6 +17,9 @@ func main() {
 	data := flag.String("d", "", "Данные для отправки в теле запроса (автоматически переключает метод на POST).")
 	headerCustom := flag.String("H", "", "Добавить свой заголовок в формате \"Name: Value\".")
 	infiniteLoop := flag.Bool("L", false, "Запустить БЕСКОНЕЧНУЮ отправку запросов (цикл зашит внутри утилиты).")
+	
+	// ИЗМЕНЕНО: Теперь принимаем просто строку-число (например, "100", "01", "1000")
+	delayStr := flag.String("s", "1000", "Задержка между бесконечными запросами В МИЛЛИСЕКУНДАХ (например: 01, 10, 500).")
 
 	flag.Usage = func() {
 		fmt.Fprintf(os.Stderr, "=====================================================================\n")
@@ -24,11 +28,23 @@ func main() {
 		fmt.Fprintf(os.Stderr, "Использование:\n  tping1 [флаги] <URL>\n\n")
 		fmt.Fprintf(os.Stderr, "Доступные флаги:\n")
 		flag.PrintDefaults() 
+		fmt.Fprintf(os.Stderr, "\nПримеры изменения скорости запросов (в миллисекундах):\n")
+		fmt.Fprintf(os.Stderr, "  tping1 -I -L -s 01 google.com     (Максимальная скорость, задержка 1 мс)\n")
+		fmt.Fprintf(os.Stderr, "  tping1 -I -L -s 500 google.com    (Каждые 500 миллисекунд)\n")
 		fmt.Fprintf(os.Stderr, "\nДля остановки бесконечного режима нажмите Ctrl + C.\n")
 		fmt.Fprintf(os.Stderr, "=====================================================================\n")
 	}
 
 	flag.Parse()
+
+	// Конвертируем строку с числом в полноценное целое число (int)
+	msCount, err := strconv.Atoi(*delayStr)
+	if err != nil || msCount < 0 {
+		fmt.Printf("Ошибка: Неверное значение флага -s (%s). Укажите целое число миллисекунд.\n", *delayStr)
+		os.Exit(1)
+	}
+	// Создаем задержку на основе полученных миллисекунд
+	delay := time.Duration(msCount) * time.Millisecond
 
 	args := flag.Args()
 	if len(args) < 1 {
@@ -37,15 +53,20 @@ func main() {
 		os.Exit(1)
 	}
 	
-	// ИСПРАВЛЕНИЕ: Берем первый элемент массива аргументов как чистую строку string
-	targetURL := args[0]
+	targetURL := args
 
 	if !strings.HasPrefix(targetURL, "http://") && !strings.HasPrefix(targetURL, "https://") {
 		targetURL = "http://" + targetURL
 	}
 
+	// Настройка HTTP-клиента с отключением удержания соединений (Keep-Alive),
+	// чтобы при сверхбыстром флуде каждый запрос гарантированно открывал новое соединение.
+	transport := &http.Transport{
+		DisableKeepAlives: true,
+	}
 	client := &http.Client{
-		Timeout: 10 * time.Second,
+		Timeout:   5 * time.Second,
+		Transport: transport,
 	}
 
 	for {
@@ -55,7 +76,10 @@ func main() {
 			break
 		}
 
-		time.Sleep(1 * time.Second)
+		// Спим указанное количество миллисекунд
+		if msCount > 0 {
+			time.Sleep(delay)
+		}
 	}
 }
 
@@ -85,12 +109,11 @@ func executeRequest(client *http.Client, url string, headOnly bool, method strin
 	if customHeader != "" {
 		parts := strings.SplitN(customHeader, ":", 2)
 		if len(parts) == 2 {
-			// ИСПРАВЛЕНИЕ: Передаем элементы строки по индексам [0] и [1]
 			req.Header.Set(strings.TrimSpace(parts[0]), strings.TrimSpace(parts[1]))
 		}
 	}
 
-	req.Header.Set("User-Agent", "curl/tping1-custom-v1.2")
+	req.Header.Set("User-Agent", "curl/tping1-custom-v1.4")
 
 	startTime := time.Now()
 	resp, err := client.Do(req)
