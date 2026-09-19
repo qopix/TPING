@@ -1,5 +1,5 @@
 # ============================================================================
-# Makefile для tping / tping2 / tping3 / tping4
+# Makefile для tping1 / tping / tping2 / tping3 / tping4
 # Сборка:    make
 # Установка: sudo make install
 # Очистка:   make clean
@@ -9,6 +9,10 @@ CXX      = g++
 CXXFLAGS = -O2 -pthread -std=c++17 -Wall
 LDFLAGS_COMMON = -pthread
 
+# Компилятор Go для tping1
+GO       = go
+
+TARGET_TPING1 = tping1
 TARGET_TPING  = tping
 TARGET_TPING2 = tping2
 TARGET_TPING3 = tping3
@@ -26,30 +30,36 @@ TPING3_LIBS = -lcurl -lssl -lcrypto
 # Флаги для tping4 (L7 slowloris / rudy / handshake, HTTP и HTTPS)
 TPING4_LIBS = -lssl -lcrypto
 
-all: $(TARGET_TPING) $(TARGET_TPING2) $(TARGET_TPING3) $(TARGET_TPING4)
+all: $(TARGET_TPING1) $(TARGET_TPING) $(TARGET_TPING2) $(TARGET_TPING3) $(TARGET_TPING4)
 
-# ---------- Сборка tping ----------
+# ---------- Сборка tping1 (Go) ----------
+$(TARGET_TPING1): tping1.go
+	$(GO) build -o $@ $^
+
+# ---------- Сборка tping (C++) ----------
 $(TARGET_TPING): tping.cpp
 	$(CXX) $(CXXFLAGS) -o $@ $^ $(TPING_LIBS) $(LDFLAGS_COMMON)
 
-# ---------- Сборка tping2 ----------
+# ---------- Сборка tping2 (C++) ----------
 $(TARGET_TPING2): tping2.cpp
 	$(CXX) $(CXXFLAGS) -o $@ $^ $(TPING2_LIBS) $(LDFLAGS_COMMON)
 
-# ---------- Сборка tping3 ----------
+# ---------- Сборка tping3 (C++) ----------
 $(TARGET_TPING3): tping3.cpp
 	$(CXX) $(CXXFLAGS) -o $@ $^ $(TPING3_LIBS) $(LDFLAGS_COMMON)
 
-# ---------- Сборка tping4 ----------
+# ---------- Сборка tping4 (C++) ----------
 $(TARGET_TPING4): tping4.cpp
 	$(CXX) $(CXXFLAGS) -o $@ $^ $(TPING4_LIBS) $(LDFLAGS_COMMON)
 
 # ---------- Установка в систему ----------
 install: all
+	sudo cp $(TARGET_TPING1) /usr/local/bin/$(TARGET_TPING1)
 	sudo cp $(TARGET_TPING)  /usr/local/bin/$(TARGET_TPING)
 	sudo cp $(TARGET_TPING2) /usr/local/bin/$(TARGET_TPING2)
 	sudo cp $(TARGET_TPING3) /usr/local/bin/$(TARGET_TPING3)
 	sudo cp $(TARGET_TPING4) /usr/local/bin/$(TARGET_TPING4)
+	sudo setcap cap_net_raw+ep /usr/local/bin/$(TARGET_TPING1)
 	sudo setcap cap_net_raw+ep /usr/local/bin/$(TARGET_TPING)
 	sudo setcap cap_net_raw+ep /usr/local/bin/$(TARGET_TPING2)
 	sudo setcap cap_net_raw+ep /usr/local/bin/$(TARGET_TPING3)
@@ -58,6 +68,7 @@ install: all
 
 # ---------- Удаление ----------
 uninstall:
+	sudo rm -f /usr/local/bin/$(TARGET_TPING1)
 	sudo rm -f /usr/local/bin/$(TARGET_TPING)
 	sudo rm -f /usr/local/bin/$(TARGET_TPING2)
 	sudo rm -f /usr/local/bin/$(TARGET_TPING3)
@@ -66,7 +77,7 @@ uninstall:
 
 # ---------- Очистка ----------
 clean:
-	rm -f $(TARGET_TPING) $(TARGET_TPING2) $(TARGET_TPING3) $(TARGET_TPING4)
+	rm -f $(TARGET_TPING1) $(TARGET_TPING) $(TARGET_TPING2) $(TARGET_TPING3) $(TARGET_TPING4)
 	rm -rf logs report.html
 
 .PHONY: all install uninstall clean
