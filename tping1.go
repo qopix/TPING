@@ -11,31 +11,20 @@ import (
 )
 
 func main() {
-	// Объявление флагов
 	headOnly := flag.Bool("I", false, "Получить только заголовки ответа (HEAD-запрос).")
 	requestMethod := flag.String("X", "GET", "Указать кастомный HTTP-метод (GET, POST, PUT, DELETE).")
 	data := flag.String("d", "", "Данные для отправки в теле запроса (автоматически переключает метод на POST).")
 	headerCustom := flag.String("H", "", "Добавить свой заголовок в формате \"Name: Value\".")
 	infiniteLoop := flag.Bool("L", false, "Запустить БЕСКОНЕЧНУЮ отправку запросов (цикл зашит внутри утилиты).")
 
-	// Вынесение всей справки на флаги -h и --help с упоминанием нового имени инструмента
 	flag.Usage = func() {
 		fmt.Fprintf(os.Stderr, "=====================================================================\n")
 		fmt.Fprintf(os.Stderr, "  TPING1 — Кастомный аналог cURL на Go со встроенным бесконечным циклом\n")
 		fmt.Fprintf(os.Stderr, "=====================================================================\n\n")
 		fmt.Fprintf(os.Stderr, "Использование:\n  tping1 [флаги] <URL>\n\n")
 		fmt.Fprintf(os.Stderr, "Доступные флаги:\n")
-		
 		flag.PrintDefaults() 
-
-		fmt.Fprintf(os.Stderr, "\nОсобенности и примеры использования:\n")
-		fmt.Fprintf(os.Stderr, "  1. Стандартный запрос заголовков:\n")
-		fmt.Fprintf(os.Stderr, "     tping1 -I google.com\n\n")
-		fmt.Fprintf(os.Stderr, "  2. БЕСКОНЕЧНЫЙ опрос заголовков (Режим зациклен внутри утилиты):\n")
-		fmt.Fprintf(os.Stderr, "     tping1 -I -L https://example.com\n\n")
-		fmt.Fprintf(os.Stderr, "  3. Бесконечная отправка POST-данных:\n")
-		fmt.Fprintf(os.Stderr, "     tping1 -X POST -d \"login=admin\" -L http://testsite.local\n\n")
-		fmt.Fprintf(os.Stderr, "Для остановки бесконечного режима нажмите Ctrl + C.\n")
+		fmt.Fprintf(os.Stderr, "\nДля остановки бесконечного режима нажмите Ctrl + C.\n")
 		fmt.Fprintf(os.Stderr, "=====================================================================\n")
 	}
 
@@ -47,7 +36,9 @@ func main() {
 		fmt.Println("Используйте флаг -h или --help для вывода подробной справки.")
 		os.Exit(1)
 	}
-	targetURL := args
+	
+	// ИСПРАВЛЕНИЕ: Берем первый элемент массива аргументов как чистую строку string
+	targetURL := args[0]
 
 	if !strings.HasPrefix(targetURL, "http://") && !strings.HasPrefix(targetURL, "https://") {
 		targetURL = "http://" + targetURL
@@ -94,7 +85,8 @@ func executeRequest(client *http.Client, url string, headOnly bool, method strin
 	if customHeader != "" {
 		parts := strings.SplitN(customHeader, ":", 2)
 		if len(parts) == 2 {
-			req.Header.Set(strings.TrimSpace(parts), strings.TrimSpace(parts))
+			// ИСПРАВЛЕНИЕ: Передаем элементы строки по индексам [0] и [1]
+			req.Header.Set(strings.TrimSpace(parts[0]), strings.TrimSpace(parts[1]))
 		}
 	}
 
