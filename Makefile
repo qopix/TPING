@@ -1,5 +1,5 @@
 # ============================================================================
-# Makefile для tping1 / tping / tping2 / tping3 / tping4
+# Makefile для tping1 / tping / tping2 / tping3 / # tping4
 # Сборка:    make
 # Установка: sudo make install
 # Очистка:   make clean
