@@ -18,7 +18,7 @@ func main() {
 	headerCustom := flag.String("H", "", "Добавить свой заголовок в формате \"Name: Value\".")
 	infiniteLoop := flag.Bool("L", false, "Запустить БЕСКОНЕЧНУЮ отправку запросов (цикл зашит внутри утилиты).")
 	
-	// ИЗМЕНЕНО: Теперь принимаем просто строку-число (например, "100", "01", "1000")
+	// Принимаем чистое число (например, "01", "10", "1000")
 	delayStr := flag.String("s", "1000", "Задержка между бесконечными запросами В МИЛЛИСЕКУНДАХ (например: 01, 10, 500).")
 
 	flag.Usage = func() {
@@ -37,7 +37,7 @@ func main() {
 
 	flag.Parse()
 
-	// Конвертируем строку с числом в полноценное целое число (int)
+	// Конвертируем строку с числом в целое число (int)
 	msCount, err := strconv.Atoi(*delayStr)
 	if err != nil || msCount < 0 {
 		fmt.Printf("Ошибка: Неверное значение флага -s (%s). Укажите целое число миллисекунд.\n", *delayStr)
@@ -53,14 +53,14 @@ func main() {
 		os.Exit(1)
 	}
 	
-	targetURL := args
+	// ФИКС ТУТ: Берем строго первый элемент [0] из массива аргументов (получаем чистую строку)
+	targetURL := args[0]
 
 	if !strings.HasPrefix(targetURL, "http://") && !strings.HasPrefix(targetURL, "https://") {
 		targetURL = "http://" + targetURL
 	}
 
-	// Настройка HTTP-клиента с отключением удержания соединений (Keep-Alive),
-	// чтобы при сверхбыстром флуде каждый запрос гарантированно открывал новое соединение.
+	// Настройка HTTP-клиента с отключением Keep-Alive для максимального флуда
 	transport := &http.Transport{
 		DisableKeepAlives: true,
 	}
@@ -113,7 +113,7 @@ func executeRequest(client *http.Client, url string, headOnly bool, method strin
 		}
 	}
 
-	req.Header.Set("User-Agent", "curl/tping1-custom-v1.4")
+	req.Header.Set("User-Agent", "curl/tping1-custom-v1.5")
 
 	startTime := time.Now()
 	resp, err := client.Do(req)
